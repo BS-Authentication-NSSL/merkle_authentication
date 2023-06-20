@@ -19,6 +19,9 @@ echo
 echo
 echo
 
+echo "Installing OpenSSL dependencies..."
+sudo apt-get install -y libssl-dev openssl-devel
+
 cd $baseDirectory
 if [[ " ${arguments[*]} " =~ " skiplibzmq " ]]; then
 	echo "Skipping libzmq."

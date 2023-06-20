@@ -31,102 +31,11 @@
 #include <stdexcept>
 
 #include <iomanip> // Cybersecurity Lab: For setprecision
-
+#include "handshake_proof.cc"
 #include <ctime> // Cybersecurity Lab: For std::tm, std::mktime, and std::time_t
 
 using namespace asn1;
 using namespace asn1::rrc;
-
-
-
-
-// Get the time epoch since June 14, 2023
-std::chrono::system_clock::time_point set_epoch_start_time() {
-    std::tm epoch_tm = {0};  // Initialize all members to zero
-    epoch_tm.tm_year = 2023 - 1900;  // Years since 1900
-    epoch_tm.tm_mon = 6 - 1;  // Months since January (0-11)
-    epoch_tm.tm_mday = 14;  // Day of the month (1-31)
-    // Convert to a time since epoch
-    std::time_t epoch_time_t = std::mktime(&epoch_tm);
-    if (epoch_time_t == -1) {
-        return std::chrono::system_clock::from_time_t(-1);
-    }
-    return std::chrono::system_clock::from_time_t(epoch_time_t);
-}
-
-
-// Convert from int64 to bytes
-std::string int64_to_bytes(int64_t input, int num_bytes) {
-    std::string bytes(num_bytes, '\0');
-    for (int i = 0; i < num_bytes; ++i) {
-        bytes[i] = (input >> (i * 8)) & 0xFF;
-    }
-    return bytes;
-}
-
-// Convert from bytes to int64
-int64_t bytes_to_int64(const std::string& bytes, int num_bytes) {
-    int64_t result = 0;
-    for (int i = 0; i < num_bytes; ++i) {
-        result |= static_cast<int64_t>(static_cast<unsigned char>(bytes[i])) << (i * 8);
-    }
-    return result;
-}
-
-
-const std::string WHITESPACE = " \n\r\t\f\v";
-
-// Cybersecurity Lab: Remove leftmost whitespace from a string
-static std::string string_ltrim(const std::string &s) {
-  size_t start = s.find_first_not_of(WHITESPACE);
-  return (start == std::string::npos) ? "" : s.substr(start);
-}
-
-// Cybersecurity Lab: Remove trailing whitespace from a string
-static std::string string_rtrim(const std::string &s) {
-  size_t end = s.find_last_not_of(WHITESPACE);
-  return (end == std::string::npos) ? "" : s.substr(0, end + 1);
-}
-
-// Cybersecurity Lab: Remove starting and ending whitespace from a string
-static std::string string_trim(const std::string &s) {
-  return string_rtrim(string_ltrim(s));
-}
-
-// Cybersecurity Lab: Generate arandom base64 string of a given length
-std::string random_string(int length){
-    std::string possible_characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    std::random_device rd;
-    std::mt19937 engine(rd());
-    std::uniform_int_distribution<> dist(0, possible_characters.size()-1);
-    std::string output = "";
-    for(int i = 0; i < length; i++){
-        int random_index = dist(engine); //get index between 0 and possible_characters.size()-1
-        output += possible_characters[random_index];
-    }
-    return output;
-}
-
-
-
-// Read string from file
-static std::string read_str_from_file(std::string path, bool read_all_lines) {
-  std::ifstream file(path);
-  if(file.is_open() && file.good()){
-    std::string contents;
-    if(read_all_lines) {
-      std::string line;
-      while (getline(file, line)) {
-        contents += line + '\n';
-      }
-    } else {
-      getline(file, contents);
-    }
-    file.close();
-    return string_trim(contents);
-  }
-  return "";
-}
 
 /*******************************************************************************
  *                                Struct Methods
@@ -3263,25 +3172,14 @@ SRSASN_CODE sib_type1_s::pack(bit_ref& bref) const
   }
 
   // Cybersecurity Lab: Pack the data field
-  std::chrono::system_clock::time_point epoch_start_time = set_epoch_start_time();
-  int numBytes = atoi(string_trim(read_str_from_file("configs/size_experiment_overhead_bytes.txt", false)).c_str());
-  if(numBytes < 1) numBytes = 1;  // The number of bytes should be at least 1 to store the timestamp
-  const int timestamp_bytes = 7;  // Timestamp is now 7 bytes
-  // Get current timestamp
-  auto timestamp = std::chrono::high_resolution_clock::now();
-  int64_t time_micros = std::chrono::duration_cast<std::chrono::microseconds>(timestamp - epoch_start_time).count();
-  // Make sure it maintains the 7-byte limit for the timestamp
-  assert(time_micros < (1LL << (timestamp_bytes * 8)));
-  std::string extra_payload = int64_to_bytes(time_micros, timestamp_bytes) + random_string(numBytes - timestamp_bytes);
-  std::vector<uint8_t> auth_val(extra_payload.begin(), extra_payload.end());
-  uint8_t *auth_val_pointer = &auth_val[0];
-  uint8_t auth_n_bytes = (uint8_t)numBytes;
-  HANDLE_CODE(bref.pack(auth_n_bytes, 8));
-  HANDLE_CODE(bref.pack_bytes(auth_val_pointer, numBytes));
-  std::cout << "!!!!!!!!! Packed string of length " << extra_payload.length() << std::endl;
-  std::cout << "Extra payload: " << extra_payload << std::endl;
+  HandshakeProof proofGenerator;
+  proofGenerator.initialize();
+  std::string proof = proofGenerator.generateProof("::"); // You said to make ID as ""
+  uint8_t proofLength = static_cast<uint8_t>(proof.size()); // Cast to uint8_t since proof size is guaranteed to be < 256
+  HANDLE_CODE(bref.pack(proofLength, 8)); // Pack the length of the proof first
+  HANDLE_CODE(bref.pack_bytes(reinterpret_cast<uint8_t*>(&proof[0]), proofLength)); // Then pack the proof bytes
+  std::cout << "Packed proof of length " << proofLength << std::endl;
   return SRSASN_SUCCESS;
-
 }
 
 
@@ -3322,36 +3220,20 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
   }
 
   // Cybersecurity Lab: Unpack the data field
-  std::chrono::system_clock::time_point epoch_start_time = set_epoch_start_time();
-  uint8_t auth_n_bytes;
-  HANDLE_CODE(bref.unpack(auth_n_bytes, 8));
-  std::vector<uint8_t> auth_val(auth_n_bytes);
-  uint8_t *auth_val_pointer = &auth_val[0];
-  HANDLE_CODE(bref.unpack_bytes(auth_val_pointer, auth_n_bytes));
-  std::string extra_payload(auth_val.begin(), auth_val.end());
-  std::string time_str = extra_payload.substr(0, 7);  // Extract the timestamp (now 7 bytes)
-  std::string remaining_data = extra_payload.substr(7);
-  std::cout << "Received string of length " << remaining_data.length() << std::endl;
-  std::cout << "Extra payload: " << remaining_data << std::endl;
-  int64_t sent_time_micros = bytes_to_int64(time_str, 7);  // Change the function to work with 7 bytes
-  auto current_timestamp_unpack = std::chrono::system_clock::now();
-  int64_t current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(current_timestamp_unpack.time_since_epoch()).count();
-  std::chrono::time_point<std::chrono::system_clock> sent_time = epoch_start_time + std::chrono::microseconds(sent_time_micros);
-  int64_t sent_time_micros_epoch = std::chrono::duration_cast<std::chrono::microseconds>(sent_time.time_since_epoch()).count();
-  double time_difference_ms = (current_time_micros - sent_time_micros_epoch) / 1000.0;
-
-  // Log to a file
-  std::string filename = "byte_size_duration.csv";
-  std::ofstream file;
-  file.open(filename, std::ios_base::app);
-  if (file.tellp() == 0) {
-      // The file is empty, write the header
-      file << "SIB1 additional size (bytes),Time duration to transmit (milliseconds)\n";
+  HandshakeProof proofVerifier;
+  proofVerifier.initialize();
+  uint8_t proofLength;
+  HANDLE_CODE(bref.unpack(proofLength, 8)); // Unpack the length of the proof first
+  std::vector<uint8_t> proofBytes(proofLength);
+  HANDLE_CODE(bref.unpack_bytes(&proofBytes[0], proofLength)); // Unpack the proof bytes
+  std::string proof(proofBytes.begin(), proofBytes.end()); // Construct the proof string
+  bool verificationSuccess = proofVerifier.verifyProof(proof);
+  if (verificationSuccess) {
+      std::cout << "Proof verification succeeded." << std::endl;
+  } else {
+      std::cout << "Proof verification failed." << std::endl;
   }
-  file << static_cast<int>(auth_n_bytes) << "," << time_difference_ms << "\n";
-  file.close();
   return SRSASN_SUCCESS;
-  //return SRSASN_ERROR_DECODE_FAIL; // Cybersecurity Lab: Intentionally fail to restart the transmission
 }
 
 void sib_type1_s::to_json(json_writer& j) const
