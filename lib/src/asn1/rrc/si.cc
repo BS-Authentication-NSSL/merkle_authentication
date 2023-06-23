@@ -34,6 +34,13 @@
 #include "handshake_proof.cc"
 #include <ctime> // Cybersecurity Lab: For std::tm, std::mktime, and std::time_t
 
+#include <fstream> // Cybersecurity lab: For read/write hash values
+// #include <vector>
+
+#include <chrono> // For processing time calculation
+#include <unistd.h>  // For delay in code
+#include <vector>   // For writing time in a csv file
+
 using namespace asn1;
 using namespace asn1::rrc;
 
@@ -3172,6 +3179,11 @@ SRSASN_CODE sib_type1_s::pack(bit_ref& bref) const
   }
 
   // Cybersecurity Lab: Pack the data field
+  std::ofstream file("proof_generation.csv",std::ios::app);
+  if (!file.is_open()) {
+        std::cout << "Error: Failed to open the file.\n";
+  }
+  auto start_time = std::chrono::high_resolution_clock::now();
   HandshakeProof proofGenerator;
   proofGenerator.initialize();
   std::string proof = proofGenerator.generateProof("::"); // You said to make ID as ""
@@ -3179,6 +3191,13 @@ SRSASN_CODE sib_type1_s::pack(bit_ref& bref) const
   HANDLE_CODE(bref.pack(proofLength, 8)); // Pack the length of the proof first
   HANDLE_CODE(bref.pack_bytes(reinterpret_cast<uint8_t*>(&proof[0]), proofLength)); // Then pack the proof bytes
   std::cout << "Packed proof of length " << proofLength << std::endl;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+  std::cout << "Proof generation duration: " << duration.count() << " microseconds." << std::endl;
+  file << std::to_string(std::chrono::time_point_cast<std::chrono::microseconds>(start_time).time_since_epoch().count()) << ",";
+  file << std::to_string(std::chrono::time_point_cast<std::chrono::microseconds>(end_time).time_since_epoch().count()) << ",";
+  file << std::to_string(duration.count()) << "," <<std::endl;
+  file.close();
   return SRSASN_SUCCESS;
 }
 
@@ -3220,6 +3239,11 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
   }
 
   // Cybersecurity Lab: Unpack the data field
+  std::ofstream file("proof_verification.csv",std::ios::app);
+  if (!file.is_open()) {
+        std::cout << "Error: Failed to open the file.\n";
+  }
+  auto start_time = std::chrono::high_resolution_clock::now();
   HandshakeProof proofVerifier;
   proofVerifier.initialize();
   uint8_t proofLength;
@@ -3233,6 +3257,14 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
   } else {
       std::cout << "Proof verification failed." << std::endl;
   }
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
+  std::cout << "Proof verification duration: " << duration.count() << " microseconds." << std::endl;
+  file << std::to_string(std::chrono::time_point_cast<std::chrono::microseconds>(start_time).time_since_epoch().count()) << ",";
+  file << std::to_string(std::chrono::time_point_cast<std::chrono::microseconds>(end_time).time_since_epoch().count()) << ",";
+  file << std::to_string(duration.count()) << "," <<std::endl;
+  file.close();
   return SRSASN_SUCCESS;
 }
 
