@@ -178,7 +178,7 @@ def processSample(sampleNum, filePath):
 
 directory = selectDir('.*automated_PCAP_logs.*', True)
 
-outputFilePath = f'{directory}_enb_processed.csv'
+outputFilePath = f'{directory}_ue_processed.csv'
 outputFile = open(outputFilePath, 'w')
 outputFile.write(header() + '\n')
 
@@ -188,7 +188,7 @@ prevStatus = 'success'
 missedSamples = 1000
 
 while processing:
-	filePath = f'{directory}/enb_mac_{sampleNum}.pcap'
+	filePath = f'{directory}/ue_mac_{sampleNum}.pcap'
 	if os.path.exists(filePath):
 		print(f'Processing: {filePath}... ', end='')
 		if prevStatus == 'blank':
