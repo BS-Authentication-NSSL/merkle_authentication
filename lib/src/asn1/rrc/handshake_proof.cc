@@ -117,7 +117,8 @@ class HandshakeProof {
 
             // Get the list of code file names
             std::string directory = ".";
-            std::string regexToIncludeStr = ".*(\\.cpp|\\.c|\\.h|\\.cc|\\.py|\\.sh)";
+            //std::string regexToIncludeStr = ".*(\\.cpp|\\.c|\\.h|\\.cc|\\.py|\\.sh)";
+            std::string regexToIncludeStr = ".*(\\.cpp|\\.c|\\.h|\\.cc)"; // Only CPP files
             std::string regexToIgnoreStr = ".*(/MerkleTree/).*";
             // Get the list of code file names
             std::vector<std::string> files = getFiles(directory, regexToIncludeStr, regexToIgnoreStr);
