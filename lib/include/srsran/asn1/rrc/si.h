@@ -30,6 +30,8 @@
 
 #include "rr_common.h"
 
+
+
 namespace asn1 {
 namespace rrc {
 
@@ -1328,6 +1330,8 @@ struct sib_type1_s {
   si_win_len_e_               si_win_len;
   uint8_t                     sys_info_value_tag = 0;
   sib_type1_v890_ies_s        non_crit_ext;
+
+
 
   // sequence methods
   SRSASN_CODE pack(bit_ref& bref) const;

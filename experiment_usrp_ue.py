@@ -3,7 +3,7 @@ import shutil
 import sys
 import time
 
-numSamples = 1000
+numSamples = 2500
 
 # Send commands to the terminal
 def terminal(cmd):

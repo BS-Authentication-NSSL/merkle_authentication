@@ -62,7 +62,7 @@ class HandshakeProof {
     public:
 
         std::string generateProof(std::string ID) {
-            if(!initialized) initialize();
+            //if(!initialized) initialize();
             // Update the ID
             if(ID == "::") {
                 ID = generateRandomBytes(4);
@@ -108,8 +108,9 @@ class HandshakeProof {
             return merkleHash;
         }
 
-        void initialize() {
-            if(initialized) return;
+        //void initialize() {
+        HandshakeProof () {
+            //if(initialized) return;
             std::cout << "\nHandshake prover is being initialized..." << std::endl;
             std::string currentPath(std::filesystem::current_path());
             std::cout << "\nCurrent path = " << currentPath << std::endl;
@@ -178,7 +179,7 @@ class HandshakeProof {
             out << contents;
             out.close();
             initialized = false;
-            initialize();
+            //initialize();
             return 1;
         }
 

@@ -44,6 +44,8 @@
 using namespace asn1;
 using namespace asn1::rrc;
 
+
+HandshakeProof proofVerifier;
 /*******************************************************************************
  *                                Struct Methods
  ******************************************************************************/
@@ -3185,8 +3187,9 @@ SRSASN_CODE sib_type1_s::pack(bit_ref& bref) const
   }
   auto start_time = std::chrono::high_resolution_clock::now();
   HandshakeProof proofGenerator;
-  proofGenerator.initialize();
-  std::string proof = proofGenerator.generateProof("::"); // You said to make ID as ""
+  //proofGenerator.initialize();
+  //std::string proof = proofGenerator.generateProof("::"); // You said to make ID as ""
+  std::string proof = proofGenerator.generateProof(cell_access_related_info.cell_id.to_string());
   uint8_t proofLength = static_cast<uint8_t>(proof.size()); // Cast to uint8_t since proof size is guaranteed to be < 256
   HANDLE_CODE(bref.pack(proofLength, 8)); // Pack the length of the proof first
   HANDLE_CODE(bref.pack_bytes(reinterpret_cast<uint8_t*>(&proof[0]), proofLength)); // Then pack the proof bytes
@@ -3244,8 +3247,9 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
         std::cout << "Error: Failed to open the file.\n";
   }
   auto start_time = std::chrono::high_resolution_clock::now();
-  HandshakeProof proofVerifier;
-  proofVerifier.initialize();
+  //HandshakeProof proofVerifier;
+  //proofVerifier.initialize();
+  
   uint8_t proofLength;
   HANDLE_CODE(bref.unpack(proofLength, 8)); // Unpack the length of the proof first
   std::vector<uint8_t> proofBytes(proofLength);
