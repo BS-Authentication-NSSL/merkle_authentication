@@ -3240,7 +3240,7 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
   if (non_crit_ext_present) {
     HANDLE_CODE(non_crit_ext.unpack(bref));
   }
-
+/**
   // Cybersecurity Lab: Unpack the data field
   std::ofstream file("proof_verification.csv",std::ios::app);
   if (!file.is_open()) {
@@ -3269,6 +3269,7 @@ SRSASN_CODE sib_type1_s::unpack(cbit_ref& bref)
   file << std::to_string(std::chrono::time_point_cast<std::chrono::microseconds>(end_time).time_since_epoch().count()) << ",";
   file << std::to_string(duration.count()) << "," <<std::endl;
   file.close();
+  */
   return SRSASN_SUCCESS;
 }
 
